@@ -15,6 +15,8 @@ public class SocketServer {
 	private static SocketServer socketServer = null;
 	private static ServerSocket server=null;
 	private static Socket socket = null;
+	private SocketListener socketListener;
+	private boolean isStart;
 
 	/**
 	 * 单列重要实现的方法
@@ -33,6 +35,7 @@ public class SocketServer {
 	 * 构造方法私有
 	 */
 	private SocketServer(){
+		this.isStart = true;
 		try{
 			//创建一个ServerSocket在端口8070监听客户请求
 			server=new ServerSocket(8070);
@@ -43,16 +46,19 @@ public class SocketServer {
 		}
 	}
 
-	public static synchronized Socket getSocket(){
+	public void getSocket(){
 		//使用accept()阻塞等待客户请求，有客户
 		//请求到来则产生一个Socket对象，并继续执行
-		try {
-			socket=server.accept();
-			System.out.println("socket已经创建！！！！！！！！！！！！！！！！");
-		} catch (IOException e) {
-			e.printStackTrace();
+		//通过While循环来监听Socket连接
+		while (isStart){
+			try {
+				socket=server.accept();
+				socketListener.socketListener(socket);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
-		return socket;
+
 	}
 
 	/**
@@ -65,5 +71,16 @@ public class SocketServer {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} 
+	}
+
+	/**
+	 * 设置是否继续监听
+	 * @param isStart
+     */
+	public void  setStart(boolean isStart){
+		this.isStart = isStart;
+	}
+	public void setSocketListener(SocketListener socketListener) {
+		this.socketListener = socketListener;
 	}
 }

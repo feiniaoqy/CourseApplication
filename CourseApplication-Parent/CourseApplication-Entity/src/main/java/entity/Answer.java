@@ -9,6 +9,16 @@ public class Answer {
     private String      answerContent;//回答的答案
     private String      time;//
 
+    public Answer() {}
+
+    public Answer(int questionId, String name, String answerContent, String time) {
+
+        this.questionId = questionId;
+        this.name = name;
+        this.answerContent = answerContent;
+        this.time = time;
+    }
+
 
     public int getQuestionId() {
         return questionId;

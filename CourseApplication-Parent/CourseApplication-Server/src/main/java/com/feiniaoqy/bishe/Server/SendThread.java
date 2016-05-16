@@ -1,5 +1,7 @@
 package com.feiniaoqy.bishe.Server;
 
+import com.feiniaoqy.bishe.util.JsonUtil;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -40,6 +42,7 @@ public class SendThread extends Thread {
                         }
                         oos.println(msg);
                         oos.flush();
+                        System.out.printf(msg+"====");
                         wait();// 发送完消息后，线程进入等待状态
                     }
                 }

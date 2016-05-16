@@ -53,6 +53,8 @@ public class ContentFrame2 extends JFrame {
 	private JTextArea textA;
 	private JTextArea textAreaWdt;
 	private JLabel label;
+
+	private ServerThread serverThread = null;
 	
 	/**
 	 * Create the frame.
@@ -167,6 +169,7 @@ public class ContentFrame2 extends JFrame {
 						Object[] s = {stuList.get(i).getName(),new Boolean(false)};
 						if ((arrList.size()-1)>=16){
 							for (int j=16;j<=(arrList.size()-1);j++){
+								//System.out.println(arrList.get(j).substring(0,17));
 								if ((stuList.get(i).getMACAddress()).equals(arrList.get(j).substring(0,17))){
 									s[1] = new Boolean(true);
 								}
@@ -339,8 +342,7 @@ public class ContentFrame2 extends JFrame {
 					String dateString = Time.getTime();
 					question.setQuestionCreateDate(dateString);
 
-					//跳转到题目页面
-					new QuestionFrame(question).setVisible(true);
+
 
 					//开启异步线程向把数据存入数据库
 					Timer timer = new Timer(1000, new ActionListener() {
@@ -349,6 +351,12 @@ public class ContentFrame2 extends JFrame {
 							//向数据库中插入数据
 							QuestionDao questionDao = new QuestionDao();
 							questionDao.insert(question);
+
+							if (serverThread==null){
+								startSocketServer();
+							}
+							//跳转到题目页面
+							new QuestionFrame(question,serverThread).setVisible(true);
 
 						}
 					});
@@ -508,6 +516,16 @@ public class ContentFrame2 extends JFrame {
 		//setting repeat is true
 		timer.setRepeats(true);
 		timer.start();
+	}
+
+	/**
+	 * 开启 SocketServer
+	 */
+	public void startSocketServer(){
+		//启动Socket服务
+		serverThread = new ServerThread();
+		//start the socket server's thread. And listen the client link to the server!!!!
+		serverThread.start();
 	}
 }
 

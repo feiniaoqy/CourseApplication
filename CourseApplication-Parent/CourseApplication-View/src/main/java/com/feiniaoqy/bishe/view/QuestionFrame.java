@@ -2,8 +2,11 @@ package com.feiniaoqy.bishe.view;
 
 import com.feiniaoqy.bishe.Server.*;
 import com.feiniaoqy.bishe.dao.QuestionDao;
+import com.feiniaoqy.bishe.dataserver.GetDataService;
+import com.feiniaoqy.bishe.dataserver.HandleDataService;
 import com.feiniaoqy.bishe.util.JsonUtil;
 import com.feiniaoqy.bishe.util.Time;
+import entity.Answer;
 import entity.Comment;
 import entity.Question;
 
@@ -12,6 +15,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Map;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -30,16 +35,26 @@ public class QuestionFrame extends JFrame {
 	private JList						questionList;
 	private JTable						table;//用于展示交互数据的
 	private JTextArea  					jTextArea;
-	private GetDataThread               getDataThread;
-	private SendThread                  sendThread;
+
+
+	private Map<String, GetDataThread>  getDataThreadMap;
+	private Map<String, SendThread>		sendThreadMap;
+
+
 	private ServerThread 				serverThread;
 
 	/**
 	 * Create the frame.
 	 */
-	public QuestionFrame(final Question question) {
+	public QuestionFrame(final Question question,final ServerThread serverThread) {
+		this.serverThread = serverThread;
+		serverThread.setFlag(true);
 		this.question = question;
-		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+
+
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+
 		setBounds(100, 100, 1133, 710);
 		questionPane = new JPanel();
 		questionPane.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -139,12 +154,7 @@ public class QuestionFrame extends JFrame {
 		Timer timer = new Timer(1000, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				if (serverThread == null ){
-					startService();
-				}else {
-					//如果已经开启服务直接发送数据
-					sendThread.setMsg(JsonUtil.QuestionToJson(question));
-				}
+				startService();
 			}
 		});
 		timer.setRepeats(false);
@@ -156,36 +166,78 @@ public class QuestionFrame extends JFrame {
 	 * 启动Socket服务
 	 */
 	private void startService() {
-		//启动Socket服务
-		serverThread = new ServerThread();
-		//start the socket server's thread. And listen the client link to the server!!!!
-		serverThread.start();
 
-		serverThread.setSocketListener(new SocketListener() {
+		//先查询数库得到最新的question
+		QuestionDao questionDao = new QuestionDao();
+		question = questionDao.selectLatest(question.getQuestionCreateDate());
+
+		//先向已有的客户端发送数据
+		getMap();
+		sendDataToClients(JsonUtil.QuestionToJson(question));
+		messageListener();
+
+		//监听到新的连接时就再次向客户端发送题目
+		getThreadListener();
+	}
+
+
+
+	private void getThreadListener(){
+		serverThread.setThreadListener(new ThreadListener() {
 			@Override
-			public void socketListener(Socket socket) {
-				getDataThread = new GetDataThread(socket);
-				getDataThread.start();
-				sendThread = new SendThread(socket);
-				sendThread.start();
-				getDataThread.setMessageListener(new MessageListener() {
-					public void Message(String msg) {
-						System.out.println("The data was got from the client: " + msg);
-						Comment comment = JsonUtil.JsonToComment(msg);
-						//先把数据存入数据库
-
-						//再从数据库中取最新的数据
-						jTextArea.append(comment.getName()+"："+comment.getCommentContent());
-					}
-				});
-
-
-				//先查询数库得到最新的question
-				QuestionDao questionDao = new QuestionDao();
-				question = questionDao.selectLatest(question.getQuestionCreateDate());
-				sendThread.setMsg(JsonUtil.QuestionToJson(question));
+			public void socketListener(int flag) {
+				if (flag == 1){
+					getMap();
+					sendDataToClients(JsonUtil.QuestionToJson(question));
+					messageListener();
+				}
 			}
 		});
+	}
+
+
+	private void messageListener(){
+		if (getDataThreadMap.size()>0){
+			//对循环做监听得到数据
+			for (Map.Entry<String,GetDataThread> entry : getDataThreadMap.entrySet()) {
+				entry.getValue().setFlag(true);//开启监听
+				entry.getValue().setMessageListener(new MessageListener() {
+					public void Message(String msg) {
+						jTextArea.setText("");
+						//再从数据库中取最新的数据
+						ArrayList<Answer> answerArrayList = GetDataService.getAnswerByQuestionId(question.getQuestionId());
+						ArrayList<Comment> commentArrayList = GetDataService.getCommentByQuestionId(question.getQuestionId());
+						//显示数据
+						for (int i = 0;i<answerArrayList.size();i++){
+							jTextArea.append("\n"+answerArrayList.get(i).getName()+"的答案："+answerArrayList.get(i).getAnswerContent());
+						}
+						for (int i = 0;i<commentArrayList.size();i++){
+							jTextArea.append("\n"+commentArrayList.get(i).getName()+"："+commentArrayList.get(i).getCommentContent());
+						}
+						//再把评论数据发送到其他人
+						//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+					}
+				});
+			}
+		}
+	}
+	/**
+	 * 得到Map数据
+	 */
+	private void getMap(){
+		getDataThreadMap = serverThread.getGetDataThreadMap();
+		sendThreadMap	 = serverThread.getSendThreadMap();
+	}
+
+
+	private void sendDataToClients(String msg){
+		if (sendThreadMap.size()>0){
+			//循环监听发送数据
+			for (Map.Entry<String,SendThread> entry : sendThreadMap.entrySet()) {
+				entry.getValue().setMsg(msg);
+			}
+		}
+
 	}
 
 
@@ -206,9 +258,13 @@ public class QuestionFrame extends JFrame {
 				if (commentData==null||"".equals(commentData)){
 					//不能为空
 				}else {
-					jTextArea.append("\n"+comment.getName()+"："+comment.getCommentContent());
-					System.out.println(comment.toString());
-					sendThread.setMsg(comment.toString());
+					if (sendThreadMap.size()>0){
+						//先存如数据库
+						HandleDataService.insertComment(comment);
+						//发送到客户端
+						sendDataToClients(comment.toString());
+						jTextArea.append("\n"+comment.getName()+"："+comment.getCommentContent());
+					}
 			}
 			}
 		});

@@ -30,9 +30,7 @@ import javax.swing.GroupLayout.Alignment;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.ListDataListener;
+import javax.swing.event.*;
 
 
 public class ContentFrame2 extends JFrame {
@@ -55,11 +53,16 @@ public class ContentFrame2 extends JFrame {
 	private JLabel label;
 
 	private ServerThread serverThread = null;
+
+	private JList listQuestion;
 	
 	/**
 	 * Create the frame.
 	 */
 	public ContentFrame2(String wifiName) {
+		if (serverThread==null){
+			startSocketServer();
+		}
 		this.wifiName = wifiName;
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 978, 718);
@@ -352,11 +355,9 @@ public class ContentFrame2 extends JFrame {
 							QuestionDao questionDao = new QuestionDao();
 							questionDao.insert(question);
 
-							if (serverThread==null){
-								startSocketServer();
-							}
 							//跳转到题目页面
 							new QuestionFrame(question,serverThread).setVisible(true);
+							getDataToListQuestion(listQuestion);
 
 						}
 					});
@@ -460,23 +461,27 @@ public class ContentFrame2 extends JFrame {
 	}
 	//========================================overTask部分==================================================
 	public void showOverTask(JPanel jpanel){
-		JList listQuestion = new JList();
+		listQuestion = new JList();
+		JScrollPane jScrollPane = new JScrollPane();
+
 		GroupLayout gl_overTaskPanel = new GroupLayout(jpanel);
 		gl_overTaskPanel.setHorizontalGroup(
 				gl_overTaskPanel.createParallelGroup(Alignment.LEADING)
 				.addGroup(Alignment.TRAILING, gl_overTaskPanel.createSequentialGroup()
-						.addComponent(listQuestion, GroupLayout.PREFERRED_SIZE, 640, GroupLayout.PREFERRED_SIZE)
+						.addComponent(jScrollPane, GroupLayout.PREFERRED_SIZE, 640, GroupLayout.PREFERRED_SIZE)
 						.addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
 				);
 		gl_overTaskPanel.setVerticalGroup(
 				gl_overTaskPanel.createParallelGroup(Alignment.LEADING)
-				.addComponent(listQuestion, Alignment.TRAILING, GroupLayout.DEFAULT_SIZE, 617, Short.MAX_VALUE)
+				.addComponent(jScrollPane, Alignment.TRAILING, GroupLayout.DEFAULT_SIZE, 617, Short.MAX_VALUE)
 				);
 		jpanel.setLayout(gl_overTaskPanel);
+		jScrollPane.setViewportView(listQuestion);
 		//向list展示数据
 		getDataToListQuestion(listQuestion);
 		
 	}
+
 	/**
 	 * 用于展示数据
 	 * @param jList 传递进来盛装问题数据的容器
@@ -488,6 +493,20 @@ public class ContentFrame2 extends JFrame {
 			List<Question> questionList = qd.selectAll();
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
+				jList.addListSelectionListener(new ListSelectionListener() {
+					int i=0;
+					@Override
+					public void valueChanged(ListSelectionEvent e) {
+						i++;
+						if (i==2){
+							Question question = questionList.get(jList.getSelectedIndex());
+							//跳转
+							new QuestionFrame(question,serverThread).setVisible(true);
+							i=0;
+						}
+					}
+				});
+
 				jList.setModel(new ListModel() {
 
 					@Override
@@ -514,7 +533,7 @@ public class ContentFrame2 extends JFrame {
 			}
 		});
 		//setting repeat is true
-		timer.setRepeats(true);
+		timer.setRepeats(false);
 		timer.start();
 	}
 

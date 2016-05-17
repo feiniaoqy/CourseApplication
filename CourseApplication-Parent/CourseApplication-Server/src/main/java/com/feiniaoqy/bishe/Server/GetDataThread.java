@@ -48,11 +48,9 @@ public class GetDataThread extends Thread {
                         if (jsonObject.has("answer")){
                             Answer answer = JsonUtil.jsonToAnswer(jsonObject.getJSONObject("answer"));
                             HandleDataService.insertAnswer(answer);
-                            msg = "answer";
                         }else if (jsonObject.has("comment")){
                             Comment comment = JsonUtil.JsonToComment(jsonObject.getJSONObject("comment"));
                             HandleDataService.insertComment(comment);
-                            msg = "comment";
                         }
                     } catch (ParseException e) {
                         e.printStackTrace();

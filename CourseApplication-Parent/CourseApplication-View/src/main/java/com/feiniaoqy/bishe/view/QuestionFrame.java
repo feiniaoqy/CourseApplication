@@ -166,7 +166,7 @@ public class QuestionFrame extends JFrame {
 	 * 启动Socket服务
 	 */
 	private void startService() {
-
+		showData();
 		//先查询数库得到最新的question
 		QuestionDao questionDao = new QuestionDao();
 		question = questionDao.selectLatest(question.getQuestionCreateDate());
@@ -204,21 +204,28 @@ public class QuestionFrame extends JFrame {
 				entry.getValue().setMessageListener(new MessageListener() {
 					public void Message(String msg) {
 						jTextArea.setText("");
-						//再从数据库中取最新的数据
-						ArrayList<Answer> answerArrayList = GetDataService.getAnswerByQuestionId(question.getQuestionId());
-						ArrayList<Comment> commentArrayList = GetDataService.getCommentByQuestionId(question.getQuestionId());
-						//显示数据
-						for (int i = 0;i<answerArrayList.size();i++){
-							jTextArea.append("\n"+answerArrayList.get(i).getName()+"的答案："+answerArrayList.get(i).getAnswerContent());
-						}
-						for (int i = 0;i<commentArrayList.size();i++){
-							jTextArea.append("\n"+commentArrayList.get(i).getName()+"："+commentArrayList.get(i).getCommentContent());
-						}
+						showData();
 						//再把评论数据发送到其他人
 						//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+						if (msg.contains("comment")){
+							sendDataToClients(msg);
+						}
 					}
 				});
 			}
+		}
+	}
+
+	private void showData(){
+		//再从数据库中取最新的数据
+		ArrayList<Answer> answerArrayList = GetDataService.getAnswerByQuestionId(question.getQuestionId());
+		ArrayList<Comment> commentArrayList = GetDataService.getCommentByQuestionId(question.getQuestionId());
+		//显示数据
+		for (int i = 0;i<answerArrayList.size();i++){
+			jTextArea.append("\n"+answerArrayList.get(i).getName()+"的答案："+answerArrayList.get(i).getAnswerContent());
+		}
+		for (int i = 0;i<commentArrayList.size();i++){
+			jTextArea.append("\n"+commentArrayList.get(i).getName()+"："+commentArrayList.get(i).getCommentContent());
 		}
 	}
 	/**

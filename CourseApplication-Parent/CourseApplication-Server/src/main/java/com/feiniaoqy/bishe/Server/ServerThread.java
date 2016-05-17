@@ -34,7 +34,9 @@ public class ServerThread extends Thread {
                     getDataThread.start();
                     sendThreadMap.put(ip,sendThread);
                     getDataThreadMap.put(ip,getDataThread);
-                    threadListener.socketListener(1);
+                    if (flag){
+                        threadListener.socketListener(1);
+                    }
                 }
             }
         });

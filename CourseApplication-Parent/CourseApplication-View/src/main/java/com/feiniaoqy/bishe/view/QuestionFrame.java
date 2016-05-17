@@ -238,6 +238,9 @@ public class QuestionFrame extends JFrame {
 
 
 	private void sendDataToClients(String msg){
+		getMap();
+		System.out.println(sendThreadMap.size());
+		System.out.println(msg+"-----------------------");
 		if (sendThreadMap.size()>0){
 			//循环监听发送数据
 			for (Map.Entry<String,SendThread> entry : sendThreadMap.entrySet()) {

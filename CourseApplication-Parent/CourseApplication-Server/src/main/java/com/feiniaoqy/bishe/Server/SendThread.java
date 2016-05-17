@@ -10,8 +10,8 @@ import java.net.Socket;
  * Created by feiniaoqy on 2016/5/1.
  */
 public class SendThread extends Thread {
-    private static Socket socket;
-    private static PrintWriter oos;
+    private Socket socket;
+    private PrintWriter oos;
     private boolean isStart = true;
     private String msg;
     public SendThread(Socket socket){
@@ -42,8 +42,10 @@ public class SendThread extends Thread {
                         }
                         oos.println(msg);
                         oos.flush();
-                        System.out.printf(msg+"====");
-                        wait();// 发送完消息后，线程进入等待状态
+                        System.out.println(msg+"====");
+                        synchronized (this){
+                            wait();// 发送完消息后，线程进入等待状态
+                        }
                     }
                 }
             }

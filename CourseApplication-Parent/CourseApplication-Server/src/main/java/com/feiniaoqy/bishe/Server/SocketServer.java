@@ -14,7 +14,7 @@ public class SocketServer {
 	//SocketServer 静态 私有 只能通过getSocketServer()得到实例化对象
 	private static SocketServer socketServer = null;
 	private static ServerSocket server=null;
-	private static Socket socket = null;
+	private Socket socket = null;
 	private SocketListener socketListener;
 	private boolean isStart;
 
